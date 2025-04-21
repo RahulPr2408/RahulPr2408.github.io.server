@@ -79,6 +79,7 @@ app.use(fileUpload({
 
 app.use(express.json())
 
+// API routes
 app.use('/api/auth', AuthRouter)
 app.use('/api/dashboard', DashboardRouter)
 app.use('/api/restaurants', RestaurantRouter)
@@ -87,13 +88,18 @@ app.use('/api/restaurants', RestaurantRouter)
 app.use('/auth', AuthRouter)
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')))
 
 // Serve static files from build directory
-app.use(express.static(path.join(__dirname, '..', 'build')));
+app.use(express.static(path.join(__dirname, '..', 'build')))
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../build', 'index.html'));
+// Handle client-side routing - this must come after API routes
+app.get('/*', (req, res) => {
+  // Don't redirect API or auth routes
+  if (req.url.startsWith('/api/') || req.url.startsWith('/auth/')) {
+    return res.status(404).json({ message: 'API endpoint not found' });
+  }
+  res.sendFile(path.join(__dirname, '..', 'build', 'index.html'));
 });
 
 // Error handling middleware
