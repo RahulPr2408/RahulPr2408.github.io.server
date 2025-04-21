@@ -99,7 +99,7 @@ const restaurantSignup = async (req, res) => {
       // Handle logo image
       if (req.files.logoImage) {
         const logoFile = req.files.logoImage;
-        const logoFileName = `logo_${Date.now()}${path.extname(logoFile.name)}`;
+        const logoFileName = `logo_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(logoFile.name)}`;
         const logoPath = path.join(uploadDir, logoFileName);
         
         await logoFile.mv(logoPath);
@@ -109,7 +109,7 @@ const restaurantSignup = async (req, res) => {
       // Handle map image
       if (req.files.mapImage) {
         const mapFile = req.files.mapImage;
-        const mapFileName = `map_${Date.now()}${path.extname(mapFile.name)}`;
+        const mapFileName = `map_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(mapFile.name)}`;
         const mapPath = path.join(uploadDir, mapFileName);
         
         await mapFile.mv(mapPath);
