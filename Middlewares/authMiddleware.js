@@ -11,8 +11,10 @@ const authMiddleware = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
-      return res.status(401)
-        .json({ success: false, message: 'No token provided' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided' 
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -20,35 +22,29 @@ const authMiddleware = async (req, res, next) => {
     let user;
     if (decoded.type === 'restaurant') {
       user = await Restaurant.findOne({ _id: decoded._id, email: decoded.email });
+      // Set both user and restaurant context for restaurant users
+      req.user = user;
+      req.restaurant = user;
+      req.userType = 'restaurant';
     } else {
       user = await User.findOne({ _id: decoded._id, email: decoded.email });
+      req.user = user;
+      req.userType = 'user';
     }
 
     if (!user) {
-      return res.status(401)
-        .json({ success: false, message: 'User not found' });
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
     }
 
-    req.user = user;
-    req.user.type = decoded.type || 'user';
     next();
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token'
-      });
-    }
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired'
-      });
-    }
     console.error('Auth middleware error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error during authentication'
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Authentication failed' 
     });
   }
 };

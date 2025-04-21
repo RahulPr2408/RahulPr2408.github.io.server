@@ -83,20 +83,37 @@ const updateRestaurantProfile = async (req, res) => {
 
 const updateRestaurantStatus = async (req, res) => {
   try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Restaurant not authenticated"
+      });
+    }
+
     const { isOpen, openTime, closeTime } = req.body;
     const restaurant = await Restaurant.findByIdAndUpdate(
-      req.restaurant._id,
+      req.user._id,
       { isOpen, openTime, closeTime },
       { new: true }
     );
-    res.header('Content-Type', 'application/json')
-       .status(200)
-       .json({ success: true, data: restaurant });
+
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: restaurant
+    });
   } catch (error) {
     console.error('Update Status Error:', error);
-    res.header('Content-Type', 'application/json')
-       .status(500)
-       .json({ success: false, message: error.message || "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
   }
 };
 
@@ -177,11 +194,38 @@ const deleteMenuItem = async (req, res) => {
   }
 };
 
+const getRestaurantProfile = async (req, res) => {
+  try {
+    if (!req.restaurant || !req.restaurant._id) {
+      return res.status(401)
+        .json({ success: false, message: "Restaurant not authenticated" });
+    }
+
+    const restaurant = await Restaurant.findById(req.restaurant._id);
+    if (!restaurant) {
+      return res.status(404)
+        .json({ success: false, message: "Restaurant not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: restaurant
+    });
+  } catch (error) {
+    console.error('Get Restaurant Profile Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+};
+
 module.exports = {
   updateRestaurantProfile,
   updateRestaurantStatus,
   addMenuItem,
   getMenuItems,
   updateMenuItem,
-  deleteMenuItem
+  deleteMenuItem,
+  getRestaurantProfile
 };

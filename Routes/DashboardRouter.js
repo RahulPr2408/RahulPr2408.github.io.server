@@ -2,6 +2,7 @@ const router = require('express').Router();
 const {
   updateRestaurantStatus,
   updateRestaurantProfile,
+  getRestaurantProfile,
   addMenuItem,
   getMenuItems,
   updateMenuItem,
@@ -24,6 +25,7 @@ const authMiddleware = require('../Middlewares/authMiddleware');
 router.use(authMiddleware);
 
 // Restaurant profile and status routes
+router.get('/restaurant/profile', getRestaurantProfile);
 router.put('/restaurant/status', updateRestaurantStatus);
 router.post('/restaurant/profile', updateRestaurantProfile);
 
