@@ -3,6 +3,14 @@ const Restaurant = require('../Models/Restaurant');
 const User = require('../Models/User');
 
 const authMiddleware = async (req, res, next) => {
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, Origin, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(200).json({});
+  }
+
   try {
     if (!process.env.JWT_SECRET) {
       throw new Error('JWT_SECRET is not configured');
@@ -38,6 +46,9 @@ const authMiddleware = async (req, res, next) => {
         message: 'User not found' 
       });
     }
+
+    // Set CORS headers for authenticated routes
+    res.header('Access-Control-Allow-Credentials', 'true');
 
     next();
   } catch (error) {

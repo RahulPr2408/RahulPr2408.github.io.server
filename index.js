@@ -25,6 +25,29 @@ app.use((req, res, next) => {
   next();
 });
 
+// CORS configuration
+const corsOptions = {
+  origin: ['https://secondplate.org', process.env.FRONTEND_URL, 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+  exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
+};
+
+// Enable CORS with options
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
+// Ensure CORS headers are set for all responses
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  next();
+});
+
 // Passport config
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
@@ -52,21 +75,6 @@ passport.use(new GoogleStrategy({
 ));
 
 app.use(passport.initialize());
-
-// CORS configuration
-const corsOptions = {
-  origin: [process.env.FRONTEND_URL, 'http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-  exposedHeaders: ['Access-Control-Allow-Origin'],
-  optionsSuccessStatus: 200
-};
-
-app.use(cors(corsOptions));
-
-// Handle preflight requests
-app.options('*', cors());
 
 // File upload middleware with temporary file storage for Cloudinary
 app.use(fileUpload({
