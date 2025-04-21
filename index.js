@@ -1,20 +1,20 @@
-const express = require('express');
-const passport = require('passport');
-const GoogleStrategy = require('passport-google-oauth20').Strategy;
-const jwt = require('jsonwebtoken');
-const UserModel = require('./Models/User');
-const cors = require('cors');
-const fileUpload = require('express-fileupload');
-const AuthRouter = require('./Routes/AuthRouter');
-const DashboardRouter = require('./Routes/DashboardRouter');
-const RestaurantRouter = require('./Routes/RestaurantRouter');
-const errorHandler = require('./Middlewares/errorHandler');
-const path = require('path');
+const express = require('express')
+const passport = require('passport')
+const GoogleStrategy = require('passport-google-oauth20').Strategy
+const jwt = require('jsonwebtoken')
+const UserModel = require('./Models/User')
+const cors = require('cors')
+const fileUpload = require('express-fileupload')
+const AuthRouter = require('./Routes/AuthRouter')
+const DashboardRouter = require('./Routes/DashboardRouter')
+const RestaurantRouter = require('./Routes/RestaurantRouter')
+const errorHandler = require('./Middlewares/errorHandler')
+const path = require('path')
 
-require('dotenv').config();
-require('./Models/db');
+require('dotenv').config()
+require('./Models/db')
 
-const app = express();
+const app = express()
 
 // Security headers
 app.use((req, res, next) => {
@@ -22,29 +22,6 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  next();
-});
-
-// CORS configuration
-const corsOptions = {
-  origin: ['https://secondplate.org', process.env.FRONTEND_URL, 'http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
-  exposedHeaders: ['Access-Control-Allow-Origin', 'Access-Control-Allow-Credentials'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
-};
-
-// Enable CORS with options
-app.use(cors(corsOptions));
-
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
-
-// Ensure CORS headers are set for all responses
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -76,7 +53,20 @@ passport.use(new GoogleStrategy({
 
 app.use(passport.initialize());
 
-// File upload middleware with temporary file storage for Cloudinary
+// CORS and middleware configuration
+app.use(cors({
+  origin: ['https://secondplate.org', 'http://localhost:3000'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+  exposedHeaders: ['Access-Control-Allow-Origin'],
+  optionsSuccessStatus: 200
+}));
+
+// Handle preflight requests
+app.options('*', cors());
+
+// File upload middleware
 app.use(fileUpload({
   createParentPath: true,
   limits: { 
@@ -87,21 +77,21 @@ app.use(fileUpload({
   tempFileDir: '/tmp/'
 }));
 
-app.use(express.json());
+app.use(express.json())
 
 // API routes
-app.use('/api/auth', AuthRouter);
-app.use('/api/dashboard', DashboardRouter);
-app.use('/api/restaurants', RestaurantRouter);
+app.use('/api/auth', AuthRouter)
+app.use('/api/dashboard', DashboardRouter)
+app.use('/api/restaurants', RestaurantRouter)
 
 // Auth routes that don't have the /api prefix
-app.use('/auth', AuthRouter);
+app.use('/auth', AuthRouter)
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')))
 
 // Serve static files from build directory
-app.use(express.static(path.join(__dirname, '..', 'build')));
+app.use(express.static(path.join(__dirname, '..', 'build')))
 
 // Handle client-side routing - this must come after API routes
 app.get('/*', (req, res) => {
@@ -115,8 +105,8 @@ app.get('/*', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000
 
 app.listen(PORT, () => {
-  console.log(`Server is running on ${PORT}`);
-});
+  console.log(`Server is running on ${PORT}`)
+})

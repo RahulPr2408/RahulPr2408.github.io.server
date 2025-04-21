@@ -21,38 +21,42 @@ const uploadToCloudinary = async (file, options = {}) => {
     // Default transformation options
     const defaultTransformation = {
       quality: 'auto',
-      format: 'auto',
+      fetch_format: 'auto',
       responsive: true,
       responsive_breakpoints: {
         create_derived: true,
         bytes_step: 20000,
         min_width: 200,
-        max_width: 1024
+        max_width: 1024,
+        transformation: { crop: 'fill', aspect_ratio: '16:9', quality: 'auto' }
       }
     };
 
     // Specific transformations based on image type
     const typeSpecificTransformations = {
       logo: {
-        mobile: { width: breakpoints.mobile.width, height: breakpoints.mobile.height, crop: 'fit' },
-        tablet: { width: breakpoints.tablet.width, height: breakpoints.tablet.height, crop: 'fit' },
-        desktop: { width: breakpoints.desktop.width, height: breakpoints.desktop.height, crop: 'fit' }
+        mobile: { ...breakpoints.mobile, crop: 'fit' },
+        tablet: { ...breakpoints.tablet, crop: 'fit' },
+        desktop: { ...breakpoints.desktop, crop: 'fit' },
+        format: 'webp'
       },
       map: {
-        mobile: { width: breakpoints.mobile.width, height: breakpoints.mobile.height, crop: 'fill' },
-        tablet: { width: breakpoints.tablet.width, height: breakpoints.tablet.height, crop: 'fill' },
-        desktop: { width: breakpoints.desktop.width, height: breakpoints.desktop.height, crop: 'fill' }
+        mobile: { ...breakpoints.mobile, crop: 'fill' },
+        tablet: { ...breakpoints.tablet, crop: 'fill' },
+        desktop: { ...breakpoints.desktop, crop: 'fill' },
+        format: 'webp'
       }
     };
 
+    const transformation = options.type ? 
+      [defaultTransformation, ...Object.values(typeSpecificTransformations[options.type])] :
+      [defaultTransformation];
+
     const uploadResult = await cloudinary.uploader.upload(file.tempFilePath, {
       folder,
+      transformation,
       resource_type: 'auto',
-      format: 'auto',
-      transformation: [{
-        quality: 'auto',
-        fetch_format: 'auto'
-      }],
+      responsive: true,
       eager: options.type ? Object.values(typeSpecificTransformations[options.type]) : undefined,
       eager_async: true
     });
@@ -60,7 +64,6 @@ const uploadToCloudinary = async (file, options = {}) => {
     // Return URLs for different breakpoints if available
     return {
       default: uploadResult.secure_url,
-      public_id: uploadResult.public_id,
       responsive: uploadResult.eager ? 
         uploadResult.eager.reduce((acc, img, index) => {
           const size = Object.keys(breakpoints)[index];
@@ -73,6 +76,24 @@ const uploadToCloudinary = async (file, options = {}) => {
     console.error('Cloudinary upload error:', error);
     throw error;
   }
+};
+
+// Function to generate responsive image URLs
+const getResponsiveImageUrl = (publicUrl, options = {}) => {
+  if (!publicUrl) return null;
+
+  const transformations = [];
+  if (options.quality) transformations.push(`q_${options.quality}`);
+  if (options.format) transformations.push(`f_${options.format}`);
+  if (options.width) transformations.push(`w_${options.width}`);
+  if (options.height) transformations.push(`h_${options.height}`);
+  if (options.crop) transformations.push(`c_${options.crop}`);
+
+  if (transformations.length === 0) return publicUrl;
+
+  const transformationString = transformations.join(',');
+  const parts = publicUrl.split('/upload/');
+  return `${parts[0]}/upload/${transformationString}/${parts[1]}`;
 };
 
 // Function to delete image from Cloudinary
@@ -93,5 +114,6 @@ const deleteFromCloudinary = async (publicUrl) => {
 module.exports = {
   cloudinary,
   uploadToCloudinary,
-  deleteFromCloudinary
+  deleteFromCloudinary,
+  getResponsiveImageUrl
 };

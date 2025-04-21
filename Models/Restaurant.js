@@ -24,22 +24,12 @@ const RestaurantSchema = new Schema({
     required: true,
   },
   logoImage: {
-    url: {
-      type: String,
-      default: function() {
-        return process.env.DEFAULT_RESTAURANT_LOGO_URL;
-      }
-    },
-    publicId: String
+    type: String,
+    default: ''
   },
   mapImage: {
-    url: {
-      type: String,
-      default: function() {
-        return process.env.DEFAULT_RESTAURANT_MAP_URL;
-      }
-    },
-    publicId: String
+    type: String,
+    default: ''
   },
   openTime: {
     type: String,
@@ -58,29 +48,7 @@ const RestaurantSchema = new Schema({
     enum: ['standard', 'combo'],
     default: 'standard'
   }
-}, { timestamps: true });
-
-// Add a pre-save middleware to ensure image URLs are properly structured
-RestaurantSchema.pre('save', function(next) {
-  // Handle logoImage
-  if (typeof this.logoImage === 'string') {
-    this.logoImage = {
-      url: this.logoImage,
-      publicId: this.logoImage.split('/upload/')[1]?.split('.')[0]
-    };
-  }
-  
-  // Handle mapImage
-  if (typeof this.mapImage === 'string') {
-    this.mapImage = {
-      url: this.mapImage,
-      publicId: this.mapImage.split('/upload/')[1]?.split('.')[0]
-    };
-  }
-  
-  next();
 });
 
 const RestaurantModel = mongoose.model('restaurants', RestaurantSchema);
-
 module.exports = RestaurantModel;

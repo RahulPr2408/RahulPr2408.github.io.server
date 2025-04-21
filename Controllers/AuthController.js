@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const UserModel = require("../Models/User");
 const RestaurantModel = require("../Models/Restaurant");
-const { uploadToCloudinary, deleteFromCloudinary } = require('../config/cloudinary');
 
 const signup = async (req, res) => {
   try {
@@ -79,36 +78,43 @@ const restaurantSignup = async (req, res) => {
         .json({ message: 'Restaurant already exists', success: false });
     }
     
-    // Create restaurant model with basic info and default images
+    // Create restaurant model with basic info
     const restaurantData = { 
       name, 
       email, 
       password: await bcrypt.hash(password, 10), 
       address, 
-      phone,
-      logoImage: {
-        url: process.env.DEFAULT_RESTAURANT_LOGO_URL,
-        publicId: null
-      },
-      mapImage: {
-        url: process.env.DEFAULT_RESTAURANT_MAP_URL,
-        publicId: null
-      }
+      phone 
     };
     
-    // Handle image uploads from middleware
-    if (req.logoUrl) {
-      restaurantData.logoImage = {
-        url: req.logoUrl.default,
-        publicId: req.logoUrl.public_id
-      };
-    }
-    
-    if (req.mapUrl) {
-      restaurantData.mapImage = {
-        url: req.mapUrl.default,
-        publicId: req.mapUrl.public_id
-      };
+    // Handle file uploads if present
+    if (req.files) {
+      const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
+      
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Handle logo image
+      if (req.files.logoImage) {
+        const logoFile = req.files.logoImage;
+        const logoFileName = `logo_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(logoFile.name)}`;
+        const logoPath = path.join(uploadDir, logoFileName);
+        
+        await logoFile.mv(logoPath);
+        restaurantData.logoImage = `/uploads/restaurants/${logoFileName}`;
+      }
+      
+      // Handle map image
+      if (req.files.mapImage) {
+        const mapFile = req.files.mapImage;
+        const mapFileName = `map_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(mapFile.name)}`;
+        const mapPath = path.join(uploadDir, mapFileName);
+        
+        await mapFile.mv(mapPath);
+        restaurantData.mapImage = `/uploads/restaurants/${mapFileName}`;
+      }
     }
     
     // Save the restaurant
@@ -120,21 +126,13 @@ const restaurantSignup = async (req, res) => {
         message: "Restaurant registered successfully",
         success: true
       });
-  } catch (error) {
-    console.error('Restaurant Registration Error:', error);
-    
-    // Cleanup any uploaded images in case of error
-    if (req.logoUrl?.public_id) {
-      await deleteFromCloudinary(req.logoUrl.default);
-    }
-    if (req.mapUrl?.public_id) {
-      await deleteFromCloudinary(req.mapUrl.default);
-    }
-    
-    res.status(500).json({
-      message: error.message || "Internal server error",
-      success: false
-    });
+  } catch (err) {
+    console.error('Restaurant signup error:', err);
+    res.status(500)
+      .json({
+        message: "Internal server error",
+        success: false
+      });
   }
 };
 

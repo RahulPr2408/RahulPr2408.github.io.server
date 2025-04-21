@@ -21,14 +21,13 @@ const {
 } = require('../Controllers/ComboMenuController');
 
 const authMiddleware = require('../Middlewares/authMiddleware');
-const { uploadImages } = require('../Middlewares/imageUploadMiddleware');
 
 router.use(authMiddleware);
 
 // Restaurant profile and status routes
 router.get('/restaurant/profile', getRestaurantProfile);
 router.put('/restaurant/status', updateRestaurantStatus);
-router.post('/restaurant/profile', uploadImages, updateRestaurantProfile);
+router.post('/restaurant/profile', updateRestaurantProfile);
 
 // Standard menu item routes
 router.get('/menu-items', getMenuItems);
