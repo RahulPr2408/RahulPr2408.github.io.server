@@ -1,4 +1,30 @@
 const errorHandler = (err, req, res, next) => {
+  // Handle Cloudinary-specific errors
+  if (err.message && err.message.includes('Cloudinary')) {
+    console.error('Cloudinary Error:', err);
+    return res.status(500).json({
+      success: false,
+      message: 'Image upload failed. Please try again.',
+      error: err.message
+    });
+  }
+
+  // Handle file size limit errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      message: 'File is too large. Maximum size is 5MB.'
+    });
+  }
+
+  // Handle file type errors
+  if (err.code === 'INVALID_FILE_TYPE') {
+    return res.status(415).json({
+      success: false,
+      message: 'Invalid file type. Only images are allowed.'
+    });
+  }
+
   console.error(err.stack);
 
   // Handle CORS errors
@@ -28,11 +54,11 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Default error
-  res.status(500).json({
+  // Handle other errors
+  console.error('Server Error:', err);
+  res.status(err.status || 500).json({
     success: false,
-    message: 'Internal server error',
-    error: err.message
+    message: err.message || 'Internal server error'
   });
 };
 

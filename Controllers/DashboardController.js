@@ -1,9 +1,7 @@
 const MenuItem = require('../Models/MenuItem');
 const Restaurant = require('../Models/Restaurant');
-const path = require('path');
-const fs = require('fs');
+const { deleteFromCloudinary } = require('../config/cloudinary');
 
-// Add this new function to handle restaurant profile updates including images
 const updateRestaurantProfile = async (req, res) => {
   try {
     const updateData = {};
@@ -22,33 +20,36 @@ const updateRestaurantProfile = async (req, res) => {
     if (req.body.isOpen !== undefined) updateData.isOpen = req.body.isOpen;
     if (req.body.menuType) updateData.menuType = req.body.menuType;
     
-    // Handle file uploads
-    if (req.files) {
-      const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
+    // Get current restaurant data for cleanup
+    const currentRestaurant = await Restaurant.findById(req.restaurant._id);
+    if (!currentRestaurant) {
+      return res.status(404).json({ success: false, message: "Restaurant not found" });
+    }
+    
+    // Handle new image uploads from middleware
+    if (req.logoUrl) {
+      updateData.logoImage = {
+        url: req.logoUrl.default,
+        publicId: req.logoUrl.public_id
+      };
       
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      // Cleanup old logo if it exists and isn't default
+      if (currentRestaurant.logoImage?.publicId && 
+          !currentRestaurant.logoImage.url.includes('default')) {
+        await deleteFromCloudinary(currentRestaurant.logoImage.url);
       }
+    }
+    
+    if (req.mapUrl) {
+      updateData.mapImage = {
+        url: req.mapUrl.default,
+        publicId: req.mapUrl.public_id
+      };
       
-      // Handle logo image
-      if (req.files.logoImage) {
-        const logoFile = req.files.logoImage;
-        const logoFileName = `logo_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(logoFile.name)}`;
-        const logoPath = path.join(uploadDir, logoFileName);
-        
-        await logoFile.mv(logoPath);
-        updateData.logoImage = `/uploads/restaurants/${logoFileName}`;
-      }
-      
-      // Handle map image
-      if (req.files.mapImage) {
-        const mapFile = req.files.mapImage;
-        const mapFileName = `map_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(mapFile.name)}`;
-        const mapPath = path.join(uploadDir, mapFileName);
-        
-        await mapFile.mv(mapPath);
-        updateData.mapImage = `/uploads/restaurants/${mapFileName}`;
+      // Cleanup old map if it exists and isn't default
+      if (currentRestaurant.mapImage?.publicId && 
+          !currentRestaurant.mapImage.url.includes('default')) {
+        await deleteFromCloudinary(currentRestaurant.mapImage.url);
       }
     }
     
@@ -70,14 +71,20 @@ const updateRestaurantProfile = async (req, res) => {
     
     console.log('Restaurant profile updated successfully');
     
-    res.header('Content-Type', 'application/json')
-       .status(200)
-       .json({ success: true, data: restaurant });
+    res.json({ 
+      success: true, 
+      data: {
+        ...restaurant.toObject(),
+        logoImage: restaurant.logoImage.url,
+        mapImage: restaurant.mapImage.url
+      }
+    });
   } catch (error) {
-    console.error('Update Profile Error:', error);
-    res.header('Content-Type', 'application/json')
-       .status(500)
-       .json({ success: false, message: error.message || "Internal server error" });
+    console.error('Update Restaurant Profile Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
   }
 };
 

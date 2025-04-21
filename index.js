@@ -1,20 +1,20 @@
-const express = require('express')
-const passport = require('passport')
-const GoogleStrategy = require('passport-google-oauth20').Strategy
-const jwt = require('jsonwebtoken')
-const UserModel = require('./Models/User')
-const cors = require('cors')
-const fileUpload = require('express-fileupload')
-const AuthRouter = require('./Routes/AuthRouter')
-const DashboardRouter = require('./Routes/DashboardRouter')
-const RestaurantRouter = require('./Routes/RestaurantRouter')
-const errorHandler = require('./Middlewares/errorHandler')
-const path = require('path')
+const express = require('express');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const jwt = require('jsonwebtoken');
+const UserModel = require('./Models/User');
+const cors = require('cors');
+const fileUpload = require('express-fileupload');
+const AuthRouter = require('./Routes/AuthRouter');
+const DashboardRouter = require('./Routes/DashboardRouter');
+const RestaurantRouter = require('./Routes/RestaurantRouter');
+const errorHandler = require('./Middlewares/errorHandler');
+const path = require('path');
 
-require('dotenv').config()
-require('./Models/db')
+require('dotenv').config();
+require('./Models/db');
 
-const app = express()
+const app = express();
 
 // Security headers
 app.use((req, res, next) => {
@@ -53,20 +53,22 @@ passport.use(new GoogleStrategy({
 
 app.use(passport.initialize());
 
-// CORS and middleware configuration
-app.use(cors({
-  origin: ['https://secondplate.org', 'http://localhost:3000'],
+// CORS configuration
+const corsOptions = {
+  origin: [process.env.FRONTEND_URL, 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
   exposedHeaders: ['Access-Control-Allow-Origin'],
   optionsSuccessStatus: 200
-}));
+};
+
+app.use(cors(corsOptions));
 
 // Handle preflight requests
 app.options('*', cors());
 
-// File upload middleware
+// File upload middleware with temporary file storage for Cloudinary
 app.use(fileUpload({
   createParentPath: true,
   limits: { 
@@ -77,21 +79,21 @@ app.use(fileUpload({
   tempFileDir: '/tmp/'
 }));
 
-app.use(express.json())
+app.use(express.json());
 
 // API routes
-app.use('/api/auth', AuthRouter)
-app.use('/api/dashboard', DashboardRouter)
-app.use('/api/restaurants', RestaurantRouter)
+app.use('/api/auth', AuthRouter);
+app.use('/api/dashboard', DashboardRouter);
+app.use('/api/restaurants', RestaurantRouter);
 
 // Auth routes that don't have the /api prefix
-app.use('/auth', AuthRouter)
+app.use('/auth', AuthRouter);
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')))
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')));
 
 // Serve static files from build directory
-app.use(express.static(path.join(__dirname, '..', 'build')))
+app.use(express.static(path.join(__dirname, '..', 'build')));
 
 // Handle client-side routing - this must come after API routes
 app.get('/*', (req, res) => {
@@ -105,8 +107,8 @@ app.get('/*', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server is running on ${PORT}`)
-})
+  console.log(`Server is running on ${PORT}`);
+});

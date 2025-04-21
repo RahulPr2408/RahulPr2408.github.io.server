@@ -3,6 +3,7 @@ const { signupValidation, loginValidation, restaurantValidation } = require('../
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../Middlewares/authMiddleware');
+const { uploadImages } = require('../Middlewares/imageUploadMiddleware');
 
 const router = require('express').Router();
 
@@ -12,7 +13,7 @@ router.post('/signup', signupValidation, signup);
 
 // Restaurant routes - using loginValidation for login since it only checks email and password
 router.post('/restaurant/login', loginValidation, restaurantLogin);
-router.post('/restaurant/signup', restaurantValidation, restaurantSignup);
+router.post('/restaurant/signup', uploadImages, restaurantSignup);
 
 // Token verification route
 router.get('/verify', authMiddleware, (req, res) => {
