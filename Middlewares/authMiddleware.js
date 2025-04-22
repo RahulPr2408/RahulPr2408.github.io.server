@@ -8,23 +8,23 @@ const authMiddleware = async (req, res, next) => {
       throw new Error('JWT_SECRET is not configured');
     }
 
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided' 
+    const authHeader = req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or missing authorization header',
       });
     }
 
+    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     let user;
     if (decoded.type === 'restaurant') {
       user = await Restaurant.findOne({ _id: decoded._id, email: decoded.email });
-      // Set both user and restaurant context for restaurant users
-      req.user = user;
       req.restaurant = user;
+      req.user = user;
       req.userType = 'restaurant';
     } else {
       user = await User.findOne({ _id: decoded._id, email: decoded.email });
@@ -33,18 +33,28 @@ const authMiddleware = async (req, res, next) => {
     }
 
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found' 
+      return res.status(401).json({
+        success: false,
+        message: 'User not found',
       });
     }
 
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Authentication failed' 
+    console.error('Auth middleware error:', error.message);
+
+    let message = 'Authentication failed';
+    if (error.name === 'JsonWebTokenError') {
+      message = 'Invalid token';
+    } else if (error.name === 'TokenExpiredError') {
+      message = 'Token expired';
+    } else if (error.message === 'JWT_SECRET is not configured') {
+      message = 'Server misconfiguration: missing JWT_SECRET';
+    }
+
+    return res.status(401).json({
+      success: false,
+      message,
     });
   }
 };
