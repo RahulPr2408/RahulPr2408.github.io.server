@@ -3,8 +3,14 @@ const { signupValidation, loginValidation, restaurantValidation } = require('../
 const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../Middlewares/authMiddleware');
+const fileUpload = require('express-fileupload');
 
 const router = require('express').Router();
+
+router.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+}));
 
 // User routes
 router.post('/login', loginValidation, login);

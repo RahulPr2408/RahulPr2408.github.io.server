@@ -3,7 +3,7 @@ const cloudinary = require('cloudinary').v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 // Breakpoint configurations for responsive images
@@ -14,68 +14,16 @@ const breakpoints = {
 };
 
 // Utility function to upload file to Cloudinary with optimizations
-const uploadToCloudinary = async (file, options = {}) => {
-  try {
-    const folder = options.folder || `${process.env.CLOUDINARY_FOLDER || 'restaurants'}/${options.type || 'general'}`;
-    
-    // Default transformation options
-    const defaultTransformation = {
-      quality: 'auto',
-      fetch_format: 'auto',
-      responsive: true,
-      responsive_breakpoints: {
-        create_derived: true,
-        bytes_step: 20000,
-        min_width: 200,
-        max_width: 1024,
-        transformation: { crop: 'fill', aspect_ratio: '16:9', quality: 'auto' }
-      }
-    };
+const uploadToCloudinary = async (file, folder) => {
+  const options = {
+    folder,
+    use_filename: true,
+    unique_filename: false,
+    overwrite: true,
+  };
 
-    // Specific transformations based on image type
-    const typeSpecificTransformations = {
-      logo: {
-        mobile: { ...breakpoints.mobile, crop: 'fit' },
-        tablet: { ...breakpoints.tablet, crop: 'fit' },
-        desktop: { ...breakpoints.desktop, crop: 'fit' },
-        format: 'webp'
-      },
-      map: {
-        mobile: { ...breakpoints.mobile, crop: 'fill' },
-        tablet: { ...breakpoints.tablet, crop: 'fill' },
-        desktop: { ...breakpoints.desktop, crop: 'fill' },
-        format: 'webp'
-      }
-    };
-
-    const transformation = options.type ? 
-      [defaultTransformation, ...Object.values(typeSpecificTransformations[options.type])] :
-      [defaultTransformation];
-
-    const uploadResult = await cloudinary.uploader.upload(file.tempFilePath, {
-      folder,
-      transformation,
-      resource_type: 'auto',
-      responsive: true,
-      eager: options.type ? Object.values(typeSpecificTransformations[options.type]) : undefined,
-      eager_async: true
-    });
-
-    // Return URLs for different breakpoints if available
-    return {
-      default: uploadResult.secure_url,
-      responsive: uploadResult.eager ? 
-        uploadResult.eager.reduce((acc, img, index) => {
-          const size = Object.keys(breakpoints)[index];
-          acc[size] = img.secure_url;
-          return acc;
-        }, {}) : 
-        null
-    };
-  } catch (error) {
-    console.error('Cloudinary upload error:', error);
-    throw error;
-  }
+  const result = await cloudinary.uploader.upload(file.path, options);
+  return result.secure_url;
 };
 
 // Function to generate responsive image URLs
