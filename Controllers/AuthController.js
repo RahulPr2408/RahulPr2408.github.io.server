@@ -70,33 +70,73 @@ const login = async (req, res) => {
 
 const restaurantSignup = async (req, res) => {
   try {
+    console.log('Restaurant signup request received');
+    console.log('Request body:', req.body);
+    console.log('Files received:', req.files ? Object.keys(req.files) : 'No files');
+
     const { name, email, password, address, phone } = req.body;
+
+    // Check if restaurant already exists
+    const existingRestaurant = await RestaurantModel.findOne({ email });
+    if (existingRestaurant) {
+      return res.status(409).json({ 
+        success: false, 
+        message: 'Restaurant with this email already exists' 
+      });
+    }
+
+    // Handle file uploads to Cloudinary
     let logoImageUrl = null;
     let mapImageUrl = null;
 
-    if (req.files && req.files.logoImage) {
-      logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
+    if (req.files) {
+      if (req.files.logoImage) {
+        try {
+          logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
+          console.log('Logo image uploaded:', logoImageUrl);
+        } catch (error) {
+          console.error('Error uploading logo:', error);
+        }
+      }
+
+      if (req.files.mapImage) {
+        try {
+          mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
+          console.log('Map image uploaded:', mapImageUrl);
+        } catch (error) {
+          console.error('Error uploading map:', error);
+        }
+      }
     }
 
-    if (req.files && req.files.mapImage) {
-      mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
-    }
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newRestaurant = new RestaurantModel({
+    // Create new restaurant
+    const restaurant = new RestaurantModel({
       name,
       email,
-      password,
+      password: hashedPassword,
       address,
       phone,
       logoImage: logoImageUrl,
-      mapImage: mapImageUrl,
+      mapImage: mapImageUrl
     });
 
-    await newRestaurant.save();
-    res.status(201).json({ message: 'Restaurant registered successfully!' });
+    await restaurant.save();
+    console.log('Restaurant saved successfully');
+
+    res.status(201).json({
+      message: "Restaurant registered successfully",
+      success: true
+    });
   } catch (error) {
-    console.error('Error during restaurant signup:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Restaurant signup error:', error);
+    res.status(500).json({
+      message: "Internal server error",
+      success: false,
+      error: error.message
+    });
   }
 };
 
