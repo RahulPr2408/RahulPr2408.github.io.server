@@ -8,3 +8,7 @@ mongoose.connect(mongo_url).then(() => {
   console.log('MongoDB Connection Error: ',err)
 })
 
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB connection error:', err);
+});
+

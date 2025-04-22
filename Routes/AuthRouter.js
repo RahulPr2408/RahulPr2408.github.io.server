@@ -67,4 +67,8 @@ router.get('/restaurant/google/callback',
   }
 );
 
+router.get('/test', (req, res) => {
+  res.json({ status: 'Auth API is working' });
+});
+
 module.exports = router;
