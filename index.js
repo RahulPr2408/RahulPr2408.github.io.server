@@ -66,16 +66,27 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// File upload middleware
+// Updated file upload middleware to handle larger file sizes and prevent unexpected end of form errors
 app.use(fileUpload({
   createParentPath: true,
   limits: { 
-    fileSize: 5 * 1024 * 1024 // 5MB max file size
+    fileSize: 10 * 1024 * 1024 // Increased to 10MB max file size
   },
   abortOnLimit: true,
   useTempFiles: true,
   tempFileDir: '/tmp/'
 }));
+
+// Middleware to handle file upload errors
+app.use((err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'File size exceeds the limit.' });
+  }
+  if (err.message === 'Unexpected end of form') {
+    return res.status(400).json({ message: 'Incomplete form submission.' });
+  }
+  next(err);
+});
 
 app.use(express.json())
 
