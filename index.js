@@ -16,6 +16,9 @@ require('./Models/db')
 
 const app = express()
 
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }));
+
 // Security headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -66,25 +69,31 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
-// Updated file upload middleware to handle larger file sizes and prevent unexpected end of form errors
-app.use(fileUpload({
-  createParentPath: true,
-  limits: { 
-    fileSize: 10 * 1024 * 1024 // Increased to 10MB max file size
-  },
-  abortOnLimit: true,
-  useTempFiles: true,
-  tempFileDir: '/tmp/'
-}));
+
 
 // In index.js, replace your existing fileUpload middleware with this:
 app.use(fileUpload({
+  createParentPath: true,
+  limits: { 
+    fileSize: 10 * 1024 * 1024 // 10MB 
+  },
+  abortOnLimit: true,
   useTempFiles: true,
   tempFileDir: '/tmp/',
-  debug: true,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit, more than enough for your images
-  abortOnLimit: false // Don't abort on limit
+  parseNested: true
 }));
+
+// Add this middleware to debug incoming requests
+app.use((req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('Request headers:', req.headers);
+    console.log('Request has files:', !!req.files);
+    if (req.files) {
+      console.log('Files:', Object.keys(req.files));
+    }
+  }
+  next();
+});
 
 // Simple error handler for file upload errors
 app.use((err, req, res, next) => {
@@ -99,7 +108,7 @@ app.use((err, req, res, next) => {
   next();
 });
 
-app.use(express.json())
+
 
 // API routes
 app.use('/api/auth', AuthRouter)

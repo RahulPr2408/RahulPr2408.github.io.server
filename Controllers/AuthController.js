@@ -1,19 +1,8 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const path = require('path');
-const fs = require('fs');
 const UserModel = require("../Models/User");
 const RestaurantModel = require("../Models/Restaurant");
 const { uploadToCloudinary } = require('../config/cloudinary');
-const cloudinary = require('cloudinary').v2;
-
-
-// Configure cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
 
 const signup = async (req, res) => {
   try {
@@ -77,17 +66,18 @@ const login = async (req, res) => {
   }
 }
 
-// In AuthController.js, replace your restaurantSignup function with this:
 const restaurantSignup = async (req, res) => {
   try {
+    console.log('Restaurant signup request received');
+    console.log('Request body:', req.body);
+    console.log('Files present:', req.files ? 'Yes' : 'No');
+    if (req.files) {
+      console.log('Files:', Object.keys(req.files));
+    }
+    
     const { name, email, password, address, phone } = req.body;
     
-    // Log request info for debugging
-    console.log("Restaurant signup request received");
-    console.log("Form data:", { name, email, address, phone });
-    console.log("Files received:", req.files ? Object.keys(req.files) : "No files");
-
-    // Check if restaurant exists
+    // Check if email already exists
     const existingRestaurant = await RestaurantModel.findOne({ email });
     if (existingRestaurant) {
       return res.status(409).json({ 
@@ -96,48 +86,32 @@ const restaurantSignup = async (req, res) => {
       });
     }
 
-    // Initialize logo and map variables
-    let logoImageUrl = null;
-    let mapImageUrl = null;
-
-    // Upload logo image if exists
+    // Upload images to Cloudinary if present
+    let logoImage = null;
+    let mapImage = null;
+    
     if (req.files && req.files.logoImage) {
-      console.log("Uploading logo image...");
+      console.log('Uploading logo image to Cloudinary...');
       try {
-        const result = await cloudinary.uploader.upload(req.files.logoImage.tempFilePath, {
-          folder: 'restaurants/logos',
-          resource_type: 'auto'
-        });
-        logoImageUrl = {
-          url: result.secure_url,
-          public_id: result.public_id
-        };
-        console.log("Logo uploaded successfully:", logoImageUrl.url);
+        logoImage = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
+        console.log('Logo upload successful:', logoImage.url);
       } catch (error) {
-        console.error("Logo upload error:", error);
+        console.error('Logo upload error:', error);
         // Continue without failing the whole process
       }
     }
-
-    // Upload map image if exists
+    
     if (req.files && req.files.mapImage) {
-      console.log("Uploading map image...");
+      console.log('Uploading map image to Cloudinary...');
       try {
-        const result = await cloudinary.uploader.upload(req.files.mapImage.tempFilePath, {
-          folder: 'restaurants/maps',
-          resource_type: 'auto'
-        });
-        mapImageUrl = {
-          url: result.secure_url,
-          public_id: result.public_id
-        };
-        console.log("Map uploaded successfully:", mapImageUrl.url);
+        mapImage = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
+        console.log('Map upload successful:', mapImage.url);
       } catch (error) {
-        console.error("Map upload error:", error);
+        console.error('Map upload error:', error);
         // Continue without failing the whole process
       }
     }
-
+    
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
@@ -148,13 +122,12 @@ const restaurantSignup = async (req, res) => {
       password: hashedPassword,
       address,
       phone,
-      logoImage: logoImageUrl,
-      mapImage: mapImageUrl
+      logoImage,
+      mapImage
     });
     
-    // Save to database
     await newRestaurant.save();
-    console.log("Restaurant registered successfully");
+    console.log('Restaurant registered successfully');
     
     res.status(201).json({
       message: 'Restaurant registered successfully!',

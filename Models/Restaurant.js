@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-// Image schema for Cloudinary image storage
+// Create a schema for Cloudinary image data
 const CloudinaryImageSchema = new Schema({
   url: {
     type: String,
