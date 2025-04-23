@@ -4,19 +4,23 @@ const passport = require('passport');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('../Middlewares/authMiddleware');
 const fileUpload = require('express-fileupload');
+const path = require('path'); // Needed if using local temp dir, but good to have
+const fs = require('fs'); // Needed if using local temp dir or checking existence
 
 const router = require('express').Router();
 
-// Configure express-fileupload
+// --- express-fileupload Configuration ---
+// Increased file size limit to 10MB
 router.use(fileUpload({
   useTempFiles: true,
-  tempFileDir: '/tmp/',
-  limits: { 
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+  tempFileDir: '/tmp/', // Default temp dir, usually works on Render. Change if needed.
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit per file
   },
-  abortOnLimit: true,
-  debug: true
+  abortOnLimit: false, // Abort if limit is exceeded (can cause 'Unexpected end of form')
+  debug: true // Enable debug logging for express-fileupload
 }));
+// --- End express-fileupload Configuration ---
 
 // User routes
 router.post('/login', loginValidation, login);
@@ -24,34 +28,64 @@ router.post('/signup', signupValidation, signup);
 
 // Restaurant routes - using loginValidation for login since it only checks email and password
 router.post('/restaurant/login', loginValidation, restaurantLogin);
+
+// Modified Restaurant Signup Route Handler Wrapper
 router.post('/restaurant/signup', async (req, res, next) => {
   try {
-    console.log('Signup request received');
-    console.log('Files:', req.files);
-    console.log('Body:', req.body);
+    console.log('Signup request received on route /api/auth/restaurant/signup');
+    console.log('Request Body:', req.body); // Log text fields
+    // Log file details IF files exist
+    if (req.files) {
+       console.log('Files received:', JSON.stringify(Object.keys(req.files))); // Log which file keys arrived
+    } else {
+       console.log('No files received in request.');
+    }
+
 
     if (!req.files && !req.body) {
+      console.log('No data received at all.');
       return res.status(400).json({
         success: false,
         message: 'No data received'
       });
     }
 
-    await restaurantSignup(req, res);
+    // Call the actual controller logic
+    await restaurantSignup(req, res, next); // Pass next to allow controller to call it on error
+
   } catch (error) {
-    console.error('Restaurant signup error:', error);
-    next(error);
+    // Catch errors specifically from this wrapper/middleware level if needed
+    console.error('Error in /restaurant/signup route handler:', error);
+    // Ensure the error is passed to the main error handler
+    // Check if the error is from file upload limit specifically
+     if (error.message && error.message.includes('LIMIT_FILE_SIZE')) {
+        return res.status(413).json({ // 413 Payload Too Large
+            success: false,
+            message: 'File size limit exceeded. Please upload smaller files (max 10MB).',
+            error: error.message
+        });
+     }
+     // Check for the busboy specific error
+     if (error.message && error.message.includes('Unexpected end of form')) {
+        return res.status(400).json({
+            success: false,
+            message: 'File upload was interrupted or incomplete. Please try again.',
+            error: error.message
+        });
+     }
+    next(error); // Pass to your global error handler
   }
 });
 
 // Token verification route
 router.get('/verify', authMiddleware, (req, res) => {
-  res.status(200).json({ 
-    valid: true, 
+  res.status(200).json({
+    valid: true,
     user: {
       email: req.user.email,
       name: req.user.name,
-      type: req.user.type || 'user'
+      type: req.user.type || 'user',
+      _id: req.user._id // Include ID if needed by frontend
     }
   });
 });
@@ -69,7 +103,7 @@ router.get('/google/callback',
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+
     const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}`;
     res.redirect(redirectUrl);
   }
@@ -77,7 +111,7 @@ router.get('/google/callback',
 
 // Restaurant Google OAuth routes
 router.get('/restaurant/google',
-  passport.authenticate('google', { 
+  passport.authenticate('google', {
     scope: ['profile', 'email'],
     state: 'restaurant' // To identify restaurant login flow
   })
@@ -91,7 +125,7 @@ router.get('/restaurant/google/callback',
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
-    
+
     const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}&isRestaurant=true&id=${req.user._id}`;
     res.redirect(redirectUrl);
   }
