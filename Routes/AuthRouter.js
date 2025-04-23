@@ -10,6 +10,9 @@ const router = require('express').Router();
 router.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  debug: true, // Enable debug mode
+  abortOnLimit: true,
 }));
 
 // User routes
@@ -18,7 +21,21 @@ router.post('/signup', signupValidation, signup);
 
 // Restaurant routes - using loginValidation for login since it only checks email and password
 router.post('/restaurant/login', loginValidation, restaurantLogin);
-router.post('/restaurant/signup', restaurantValidation, restaurantSignup);
+router.post('/restaurant/signup', async (req, res, next) => {
+  console.log('Files received:', req.files);
+  console.log('Body received:', req.body);
+  
+  if (!req.files) {
+    console.log('No files were uploaded');
+  }
+  
+  try {
+    await restaurantSignup(req, res);
+  } catch (error) {
+    console.error('Restaurant signup error:', error);
+    next(error);
+  }
+});
 
 // Token verification route
 router.get('/verify', authMiddleware, (req, res) => {

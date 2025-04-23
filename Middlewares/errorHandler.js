@@ -1,5 +1,22 @@
 const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error caught by middleware:', err);
+
+  // Handle file upload errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      success: false,
+      message: 'File is too large',
+      error: err.message
+    });
+  }
+
+  if (err.message === 'Unexpected end of form') {
+    return res.status(400).json({
+      success: false,
+      message: 'File upload was interrupted',
+      error: err.message
+    });
+  }
 
   // Handle CORS errors
   if (err.message.includes('CORS')) {
@@ -28,7 +45,7 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  // Default error
+  // Handle other errors
   res.status(500).json({
     success: false,
     message: 'Internal server error',

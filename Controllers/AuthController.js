@@ -72,7 +72,7 @@ const restaurantSignup = async (req, res) => {
   try {
     console.log('Restaurant signup request received');
     console.log('Request body:', req.body);
-    console.log('Files received:', req.files ? Object.keys(req.files) : 'No files');
+    console.log('Files received:', req.files);
 
     const { name, email, password, address, phone } = req.body;
 
@@ -90,22 +90,27 @@ const restaurantSignup = async (req, res) => {
     let mapImageUrl = null;
 
     if (req.files) {
-      if (req.files.logoImage) {
-        try {
-          logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
-          console.log('Logo image uploaded:', logoImageUrl);
-        } catch (error) {
-          console.error('Error uploading logo:', error);
+      try {
+        if (req.files.logoImage) {
+          const result = await uploadToCloudinary(req.files.logoImage.tempFilePath, 'restaurants/logos');
+          logoImageUrl = result;
+          // Clean up temp file
+          fs.unlinkSync(req.files.logoImage.tempFilePath);
         }
-      }
 
-      if (req.files.mapImage) {
-        try {
-          mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
-          console.log('Map image uploaded:', mapImageUrl);
-        } catch (error) {
-          console.error('Error uploading map:', error);
+        if (req.files.mapImage) {
+          const result = await uploadToCloudinary(req.files.mapImage.tempFilePath, 'restaurants/maps');
+          mapImageUrl = result;
+          // Clean up temp file
+          fs.unlinkSync(req.files.mapImage.tempFilePath);
         }
+      } catch (uploadError) {
+        console.error('Error uploading to Cloudinary:', uploadError);
+        return res.status(500).json({
+          success: false,
+          message: 'Error uploading images',
+          error: uploadError.message
+        });
       }
     }
 
@@ -127,14 +132,14 @@ const restaurantSignup = async (req, res) => {
     console.log('Restaurant saved successfully');
 
     res.status(201).json({
-      message: "Restaurant registered successfully",
-      success: true
+      success: true,
+      message: "Restaurant registered successfully"
     });
   } catch (error) {
     console.error('Restaurant signup error:', error);
     res.status(500).json({
-      message: "Internal server error",
       success: false,
+      message: "Internal server error",
       error: error.message
     });
   }
