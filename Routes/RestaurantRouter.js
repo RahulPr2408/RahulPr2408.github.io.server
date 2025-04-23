@@ -22,6 +22,26 @@ router.get('/', cors(corsOptions), async (req, res) => {
   }
 });
 
+// Temporary test route in RestaurantRouter.js
+router.get('/test-cloudinary', cors(corsOptions), async (req, res) => {
+  try {
+    const { cloudinary } = require('../config/cloudinary');
+    const result = await cloudinary.api.ping();
+    res.status(200).json({ 
+      success: true, 
+      message: 'Cloudinary connection successful',
+      result 
+    });
+  } catch (error) {
+    console.error('Cloudinary test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Cloudinary connection failed', 
+      error: error.message 
+    });
+  }
+});
+
 // GET route to fetch menu items for a specific restaurant
 router.get('/:restaurantId/menu', cors(corsOptions), async (req, res) => {
   try {

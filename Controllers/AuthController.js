@@ -71,32 +71,56 @@ const login = async (req, res) => {
 const restaurantSignup = async (req, res) => {
   try {
     const { name, email, password, address, phone } = req.body;
-    let logoImageUrl = null;
-    let mapImageUrl = null;
-
+    
+    // Check if restaurant already exists
+    const existingRestaurant = await RestaurantModel.findOne({ email });
+    if (existingRestaurant) {
+      return res.status(409).json({ 
+        message: 'Restaurant with this email already exists', 
+        success: false 
+      });
+    }
+    
+    // Upload images to Cloudinary if present
+    let logoImage = null;
+    let mapImage = null;
+    
     if (req.files && req.files.logoImage) {
-      logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
+      const logoResult = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
+      logoImage = logoResult;
     }
-
+    
     if (req.files && req.files.mapImage) {
-      mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
+      const mapResult = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
+      mapImage = mapResult;
     }
-
+    
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Create new restaurant
     const newRestaurant = new RestaurantModel({
       name,
       email,
-      password,
+      password: hashedPassword,
       address,
       phone,
-      logoImage: logoImageUrl,
-      mapImage: mapImageUrl,
+      logoImage: logoImage,
+      mapImage: mapImage
     });
-
+    
     await newRestaurant.save();
-    res.status(201).json({ message: 'Restaurant registered successfully!' });
+    
+    res.status(201).json({
+      message: 'Restaurant registered successfully!',
+      success: true
+    });
   } catch (error) {
     console.error('Error during restaurant signup:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ 
+      message: error.message || 'Internal server error', 
+      success: false 
+    });
   }
 };
 

@@ -2,8 +2,10 @@ const MenuItem = require('../Models/MenuItem');
 const Restaurant = require('../Models/Restaurant');
 const path = require('path');
 const fs = require('fs');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
-// Add this new function to handle restaurant profile updates including images
+
+// Add this function to handle restaurant profile updates with Cloudinary
 const updateRestaurantProfile = async (req, res) => {
   try {
     const updateData = {};
@@ -22,33 +24,24 @@ const updateRestaurantProfile = async (req, res) => {
     if (req.body.isOpen !== undefined) updateData.isOpen = req.body.isOpen;
     if (req.body.menuType) updateData.menuType = req.body.menuType;
     
-    // Handle file uploads
+    // Handle file uploads using Cloudinary
     if (req.files) {
-      const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
-      
-      // Create directory if it doesn't exist
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-      
       // Handle logo image
       if (req.files.logoImage) {
-        const logoFile = req.files.logoImage;
-        const logoFileName = `logo_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(logoFile.name)}`;
-        const logoPath = path.join(uploadDir, logoFileName);
-        
-        await logoFile.mv(logoPath);
-        updateData.logoImage = `/uploads/restaurants/${logoFileName}`;
+        const logoResult = await uploadToCloudinary(
+          req.files.logoImage, 
+          `restaurants/logos/${req.restaurant._id}`
+        );
+        updateData.logoImage = logoResult;
       }
       
       // Handle map image
       if (req.files.mapImage) {
-        const mapFile = req.files.mapImage;
-        const mapFileName = `map_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(mapFile.name)}`;
-        const mapPath = path.join(uploadDir, mapFileName);
-        
-        await mapFile.mv(mapPath);
-        updateData.mapImage = `/uploads/restaurants/${mapFileName}`;
+        const mapResult = await uploadToCloudinary(
+          req.files.mapImage, 
+          `restaurants/maps/${req.restaurant._id}`
+        );
+        updateData.mapImage = mapResult;
       }
     }
     
