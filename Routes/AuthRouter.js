@@ -46,7 +46,7 @@ router.get('/google/callback',
       { expiresIn: '24h' }
     );
     
-    const redirectUrl = `${process.env.FRONTEND_URL}/#/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}`;
     res.redirect(redirectUrl);
   }
 );
@@ -68,7 +68,7 @@ router.get('/restaurant/google/callback',
       { expiresIn: '24h' }
     );
     
-    const redirectUrl = `${process.env.FRONTEND_URL}/#/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}&isRestaurant=true&id=${req.user._id}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}/oauth-callback?token=${token}&name=${encodeURIComponent(req.user.name)}&isRestaurant=true&id=${req.user._id}`;
     res.redirect(redirectUrl);
   }
 );
