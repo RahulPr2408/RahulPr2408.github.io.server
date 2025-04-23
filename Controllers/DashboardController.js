@@ -1,8 +1,9 @@
 const MenuItem = require('../Models/MenuItem');
 const Restaurant = require('../Models/Restaurant');
-const { uploadToCloudinary } = require('../config/cloudinary');
+const path = require('path');
+const fs = require('fs');
 
-// Add this function to handle restaurant profile updates with Cloudinary
+// Add this new function to handle restaurant profile updates including images
 const updateRestaurantProfile = async (req, res) => {
   try {
     const updateData = {};
@@ -18,39 +19,36 @@ const updateRestaurantProfile = async (req, res) => {
     if (req.body.phone) updateData.phone = req.body.phone;
     if (req.body.openTime) updateData.openTime = req.body.openTime;
     if (req.body.closeTime) updateData.closeTime = req.body.closeTime;
-    if (req.body.isOpen !== undefined) updateData.isOpen = req.body.isOpen === 'true' || req.body.isOpen === true;
+    if (req.body.isOpen !== undefined) updateData.isOpen = req.body.isOpen;
     if (req.body.menuType) updateData.menuType = req.body.menuType;
     
-    // Handle file uploads using Cloudinary
+    // Handle file uploads
     if (req.files) {
+      const uploadDir = path.join(__dirname, '../../public/uploads/restaurants');
+      
+      // Create directory if it doesn't exist
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
       // Handle logo image
       if (req.files.logoImage) {
-        console.log('Logo image found, uploading to Cloudinary...');
-        try {
-          const logoResult = await uploadToCloudinary(
-            req.files.logoImage, 
-            `restaurants/logos/${req.restaurant._id}`
-          );
-          updateData.logoImage = logoResult;
-          console.log('Logo image uploaded successfully:', logoResult.url);
-        } catch (error) {
-          console.error('Logo upload error:', error);
-        }
+        const logoFile = req.files.logoImage;
+        const logoFileName = `logo_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(logoFile.name)}`;
+        const logoPath = path.join(uploadDir, logoFileName);
+        
+        await logoFile.mv(logoPath);
+        updateData.logoImage = `/uploads/restaurants/${logoFileName}`;
       }
       
       // Handle map image
       if (req.files.mapImage) {
-        console.log('Map image found, uploading to Cloudinary...');
-        try {
-          const mapResult = await uploadToCloudinary(
-            req.files.mapImage, 
-            `restaurants/maps/${req.restaurant._id}`
-          );
-          updateData.mapImage = mapResult;
-          console.log('Map image uploaded successfully:', mapResult.url);
-        } catch (error) {
-          console.error('Map upload error:', error);
-        }
+        const mapFile = req.files.mapImage;
+        const mapFileName = `map_${req.restaurant._id}_${Date.now()}_${Math.random().toString(36).substring(7)}${path.extname(mapFile.name)}`;
+        const mapPath = path.join(uploadDir, mapFileName);
+        
+        await mapFile.mv(mapPath);
+        updateData.mapImage = `/uploads/restaurants/${mapFileName}`;
       }
     }
     
@@ -119,33 +117,6 @@ const updateRestaurantStatus = async (req, res) => {
   }
 };
 
-const getRestaurantProfile = async (req, res) => {
-  try {
-    if (!req.restaurant || !req.restaurant._id) {
-      return res.status(401)
-        .json({ success: false, message: "Restaurant not authenticated" });
-    }
-
-    const restaurant = await Restaurant.findById(req.restaurant._id);
-    if (!restaurant) {
-      return res.status(404)
-        .json({ success: false, message: "Restaurant not found" });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: restaurant
-    });
-  } catch (error) {
-    console.error('Get Restaurant Profile Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || "Internal server error"
-    });
-  }
-};
-
-// Other controller functions (menu items, etc.) remain unchanged
 const addMenuItem = async (req, res) => {
   try {
     const menuItem = new MenuItem({
@@ -220,6 +191,32 @@ const deleteMenuItem = async (req, res) => {
     res.header('Content-Type', 'application/json')
        .status(500)
        .json({ success: false, message: error.message || "Internal server error" });
+  }
+};
+
+const getRestaurantProfile = async (req, res) => {
+  try {
+    if (!req.restaurant || !req.restaurant._id) {
+      return res.status(401)
+        .json({ success: false, message: "Restaurant not authenticated" });
+    }
+
+    const restaurant = await Restaurant.findById(req.restaurant._id);
+    if (!restaurant) {
+      return res.status(404)
+        .json({ success: false, message: "Restaurant not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: restaurant
+    });
+  } catch (error) {
+    console.error('Get Restaurant Profile Error:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
   }
 };
 

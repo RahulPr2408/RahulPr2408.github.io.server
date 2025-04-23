@@ -1,5 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
 const UserModel = require("../Models/User");
 const RestaurantModel = require("../Models/Restaurant");
 const { uploadToCloudinary } = require('../config/cloudinary');
@@ -68,78 +70,33 @@ const login = async (req, res) => {
 
 const restaurantSignup = async (req, res) => {
   try {
-    console.log('Restaurant signup request received');
-    console.log('Request body:', req.body);
-    console.log('Files present:', req.files ? 'Yes' : 'No');
-    if (req.files) {
-      console.log('Files:', Object.keys(req.files));
-    }
-    
     const { name, email, password, address, phone } = req.body;
-    
-    // Check if email already exists
-    const existingRestaurant = await RestaurantModel.findOne({ email });
-    if (existingRestaurant) {
-      return res.status(409).json({ 
-        message: 'Restaurant with this email already exists', 
-        success: false 
-      });
+    let logoImageUrl = null;
+    let mapImageUrl = null;
+
+    if (req.files && req.files.logoImage) {
+      logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
     }
 
-    // Upload images to Cloudinary if present
-    let logoImage = null;
-    let mapImage = null;
-    
-    if (req.files && req.files.logoImage) {
-      console.log('Uploading logo image to Cloudinary...');
-      try {
-        logoImage = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
-        console.log('Logo upload successful:', logoImage.url);
-      } catch (error) {
-        console.error('Logo upload error:', error);
-        // Continue without failing the whole process
-      }
-    }
-    
     if (req.files && req.files.mapImage) {
-      console.log('Uploading map image to Cloudinary...');
-      try {
-        mapImage = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
-        console.log('Map upload successful:', mapImage.url);
-      } catch (error) {
-        console.error('Map upload error:', error);
-        // Continue without failing the whole process
-      }
+      mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
     }
-    
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
-    // Create new restaurant
+
     const newRestaurant = new RestaurantModel({
       name,
       email,
-      password: hashedPassword,
+      password,
       address,
       phone,
-      logoImage,
-      mapImage
+      logoImage: logoImageUrl,
+      mapImage: mapImageUrl,
     });
-    
+
     await newRestaurant.save();
-    console.log('Restaurant registered successfully');
-    
-    res.status(201).json({
-      message: 'Restaurant registered successfully!',
-      success: true
-    });
+    res.status(201).json({ message: 'Restaurant registered successfully!' });
   } catch (error) {
     console.error('Error during restaurant signup:', error);
-    res.status(500).json({ 
-      message: 'Internal server error', 
-      success: false,
-      error: error.message 
-    });
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
