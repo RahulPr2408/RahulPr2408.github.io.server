@@ -7,12 +7,15 @@ const fileUpload = require('express-fileupload');
 
 const router = require('express').Router();
 
+// Configure express-fileupload
 router.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-  debug: true, // Enable debug mode
+  limits: { 
+    fileSize: 5 * 1024 * 1024 // 5MB limit
+  },
   abortOnLimit: true,
+  debug: true
 }));
 
 // User routes
@@ -22,14 +25,18 @@ router.post('/signup', signupValidation, signup);
 // Restaurant routes - using loginValidation for login since it only checks email and password
 router.post('/restaurant/login', loginValidation, restaurantLogin);
 router.post('/restaurant/signup', async (req, res, next) => {
-  console.log('Files received:', req.files);
-  console.log('Body received:', req.body);
-  
-  if (!req.files) {
-    console.log('No files were uploaded');
-  }
-  
   try {
+    console.log('Signup request received');
+    console.log('Files:', req.files);
+    console.log('Body:', req.body);
+
+    if (!req.files && !req.body) {
+      return res.status(400).json({
+        success: false,
+        message: 'No data received'
+      });
+    }
+
     await restaurantSignup(req, res);
   } catch (error) {
     console.error('Restaurant signup error:', error);

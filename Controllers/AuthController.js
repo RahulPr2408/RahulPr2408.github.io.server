@@ -70,38 +70,41 @@ const login = async (req, res) => {
 
 const restaurantSignup = async (req, res) => {
   try {
-    console.log('Restaurant signup request received');
-    console.log('Request body:', req.body);
-    console.log('Files received:', req.files);
-
+    console.log('Processing restaurant signup');
     const { name, email, password, address, phone } = req.body;
+
+    // Validate required fields
+    if (!name || !email || !password || !address || !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
 
     // Check if restaurant already exists
     const existingRestaurant = await RestaurantModel.findOne({ email });
     if (existingRestaurant) {
-      return res.status(409).json({ 
-        success: false, 
-        message: 'Restaurant with this email already exists' 
+      return res.status(409).json({
+        success: false,
+        message: 'Restaurant with this email already exists'
       });
     }
 
-    // Handle file uploads to Cloudinary
+    // Handle file uploads
     let logoImageUrl = null;
     let mapImageUrl = null;
 
     if (req.files) {
       try {
         if (req.files.logoImage) {
-          const result = await uploadToCloudinary(req.files.logoImage.tempFilePath, 'restaurants/logos');
-          logoImageUrl = result;
-          // Clean up temp file
+          console.log('Uploading logo image');
+          logoImageUrl = await uploadToCloudinary(req.files.logoImage.tempFilePath, 'restaurants/logos');
           fs.unlinkSync(req.files.logoImage.tempFilePath);
         }
 
         if (req.files.mapImage) {
-          const result = await uploadToCloudinary(req.files.mapImage.tempFilePath, 'restaurants/maps');
-          mapImageUrl = result;
-          // Clean up temp file
+          console.log('Uploading map image');
+          mapImageUrl = await uploadToCloudinary(req.files.mapImage.tempFilePath, 'restaurants/maps');
           fs.unlinkSync(req.files.mapImage.tempFilePath);
         }
       } catch (uploadError) {

@@ -14,16 +14,23 @@ const breakpoints = {
 };
 
 // Utility function to upload file to Cloudinary with optimizations
-const uploadToCloudinary = async (file, folder) => {
-  const options = {
-    folder,
-    use_filename: true,
-    unique_filename: false,
-    overwrite: true,
-  };
-
-  const result = await cloudinary.uploader.upload(file.path, options);
-  return result.secure_url;
+const uploadToCloudinary = async (filePath, folder) => {
+  try {
+    console.log('Uploading to Cloudinary:', { filePath, folder });
+    
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: folder,
+      resource_type: 'auto',
+      use_filename: true,
+      unique_filename: true
+    });
+    
+    console.log('Cloudinary upload successful:', result.secure_url);
+    return result.secure_url;
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    throw error;
+  }
 };
 
 // Function to generate responsive image URLs
