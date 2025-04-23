@@ -73,14 +73,21 @@ app.options('*', cors());
 
 // In index.js, replace your existing fileUpload middleware with this:
 app.use(fileUpload({
-  createParentPath: true,
-  limits: { 
-    fileSize: 10 * 1024 * 1024 // 10MB 
-  },
-  abortOnLimit: true,
   useTempFiles: true,
   tempFileDir: '/tmp/',
-  parseNested: true
+  limits: { fileSize: 5 * 1024 * 1024 },
+  abortOnLimit: true,
+  safeFileNames: true,
+  preserveExtension: true,
+  createParentPath: true,
+  debug: true,
+  // Add custom Busboy options
+  busboyOptions: {
+    highWaterMark: 2 * 1024 * 1024, // 2MB - increase internal buffer size
+    limits: {
+      fieldSize: 2 * 1024 * 1024 // 2MB
+    }
+  }
 }));
 
 // Add this middleware to debug incoming requests
