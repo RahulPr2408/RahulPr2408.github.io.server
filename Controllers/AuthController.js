@@ -5,6 +5,15 @@ const fs = require('fs');
 const UserModel = require("../Models/User");
 const RestaurantModel = require("../Models/Restaurant");
 const { uploadToCloudinary } = require('../config/cloudinary');
+const cloudinary = require('cloudinary').v2;
+
+
+// Configure cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 const signup = async (req, res) => {
   try {
@@ -68,11 +77,17 @@ const login = async (req, res) => {
   }
 }
 
+// In AuthController.js, replace your restaurantSignup function with this:
 const restaurantSignup = async (req, res) => {
   try {
     const { name, email, password, address, phone } = req.body;
     
-    // Check if restaurant already exists
+    // Log request info for debugging
+    console.log("Restaurant signup request received");
+    console.log("Form data:", { name, email, address, phone });
+    console.log("Files received:", req.files ? Object.keys(req.files) : "No files");
+
+    // Check if restaurant exists
     const existingRestaurant = await RestaurantModel.findOne({ email });
     if (existingRestaurant) {
       return res.status(409).json({ 
@@ -80,21 +95,49 @@ const restaurantSignup = async (req, res) => {
         success: false 
       });
     }
-    
-    // Upload images to Cloudinary if present
-    let logoImage = null;
-    let mapImage = null;
-    
+
+    // Initialize logo and map variables
+    let logoImageUrl = null;
+    let mapImageUrl = null;
+
+    // Upload logo image if exists
     if (req.files && req.files.logoImage) {
-      const logoResult = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
-      logoImage = logoResult;
+      console.log("Uploading logo image...");
+      try {
+        const result = await cloudinary.uploader.upload(req.files.logoImage.tempFilePath, {
+          folder: 'restaurants/logos',
+          resource_type: 'auto'
+        });
+        logoImageUrl = {
+          url: result.secure_url,
+          public_id: result.public_id
+        };
+        console.log("Logo uploaded successfully:", logoImageUrl.url);
+      } catch (error) {
+        console.error("Logo upload error:", error);
+        // Continue without failing the whole process
+      }
     }
-    
+
+    // Upload map image if exists
     if (req.files && req.files.mapImage) {
-      const mapResult = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
-      mapImage = mapResult;
+      console.log("Uploading map image...");
+      try {
+        const result = await cloudinary.uploader.upload(req.files.mapImage.tempFilePath, {
+          folder: 'restaurants/maps',
+          resource_type: 'auto'
+        });
+        mapImageUrl = {
+          url: result.secure_url,
+          public_id: result.public_id
+        };
+        console.log("Map uploaded successfully:", mapImageUrl.url);
+      } catch (error) {
+        console.error("Map upload error:", error);
+        // Continue without failing the whole process
+      }
     }
-    
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
@@ -105,11 +148,13 @@ const restaurantSignup = async (req, res) => {
       password: hashedPassword,
       address,
       phone,
-      logoImage: logoImage,
-      mapImage: mapImage
+      logoImage: logoImageUrl,
+      mapImage: mapImageUrl
     });
     
+    // Save to database
     await newRestaurant.save();
+    console.log("Restaurant registered successfully");
     
     res.status(201).json({
       message: 'Restaurant registered successfully!',
@@ -118,8 +163,9 @@ const restaurantSignup = async (req, res) => {
   } catch (error) {
     console.error('Error during restaurant signup:', error);
     res.status(500).json({ 
-      message: error.message || 'Internal server error', 
-      success: false 
+      message: 'Internal server error', 
+      success: false,
+      error: error.message 
     });
   }
 };

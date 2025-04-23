@@ -77,15 +77,26 @@ app.use(fileUpload({
   tempFileDir: '/tmp/'
 }));
 
-// Middleware to handle file upload errors
+// In index.js, replace your existing fileUpload middleware with this:
+app.use(fileUpload({
+  useTempFiles: true,
+  tempFileDir: '/tmp/',
+  debug: true,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit, more than enough for your images
+  abortOnLimit: false // Don't abort on limit
+}));
+
+// Simple error handler for file upload errors
 app.use((err, req, res, next) => {
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(413).json({ message: 'File size exceeds the limit.' });
+  if (err) {
+    console.error('File upload error:', err);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'File upload error', 
+      error: err.message 
+    });
   }
-  if (err.message === 'Unexpected end of form') {
-    return res.status(400).json({ message: 'Incomplete form submission.' });
-  }
-  next(err);
+  next();
 });
 
 app.use(express.json())
