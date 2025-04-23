@@ -70,121 +70,33 @@ const login = async (req, res) => {
 
 const restaurantSignup = async (req, res) => {
   try {
-    console.log('Processing restaurant signup');
     const { name, email, password, address, phone } = req.body;
-
-    // Validate required fields
-    if (!name || !email || !password || !address || !phone) {
-      return res.status(400).json({
-        success: false,
-        message: 'All fields are required'
-      });
-    }
-
-    // Check if restaurant already exists
-    const existingRestaurant = await RestaurantModel.findOne({ email });
-    if (existingRestaurant) {
-      return res.status(409).json({
-        success: false,
-        message: 'Restaurant with this email already exists'
-      });
-    }
-
-    // Handle file uploads
     let logoImageUrl = null;
     let mapImageUrl = null;
 
-    if (req.files) {
-      try {
-        if (req.files.logoImage) {
-          console.log('Preparing to upload logo image', {
-            size: req.files.logoImage.size, 
-            mimetype: req.files.logoImage.mimetype
-          });
-          
-          // Validate file type
-          const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-          if (!allowedMimeTypes.includes(req.files.logoImage.mimetype)) {
-            return res.status(400).json({
-              success: false,
-              message: 'Logo image must be JPEG, PNG, or GIF'
-            });
-          }
-          
-          // Upload the image
-          logoImageUrl = await uploadToCloudinary(req.files.logoImage.tempFilePath, 'restaurants/logos');
-          
-          // Clean up temp file after successful upload
-          if (fs.existsSync(req.files.logoImage.tempFilePath)) {
-            fs.unlinkSync(req.files.logoImage.tempFilePath);
-          }
-          
-          console.log('Logo upload successful');
-        }
-
-        if (req.files.mapImage) {
-          console.log('Preparing to upload map image', {
-            size: req.files.mapImage.size, 
-            mimetype: req.files.mapImage.mimetype
-          });
-          
-          // Validate file type
-          const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-          if (!allowedMimeTypes.includes(req.files.mapImage.mimetype)) {
-            return res.status(400).json({
-              success: false,
-              message: 'Map image must be JPEG, PNG, or GIF'
-            });
-          }
-          
-          // Upload the image
-          mapImageUrl = await uploadToCloudinary(req.files.mapImage.tempFilePath, 'restaurants/maps');
-          
-          // Clean up temp file after successful upload
-          if (fs.existsSync(req.files.mapImage.tempFilePath)) {
-            fs.unlinkSync(req.files.mapImage.tempFilePath);
-          }
-          
-          console.log('Map upload successful');
-        }
-      } catch (uploadError) {
-        console.error('Error uploading to Cloudinary:', uploadError);
-        return res.status(500).json({
-          success: false,
-          message: 'Error uploading images',
-          error: uploadError.message
-        });
-      }
+    if (req.files && req.files.logoImage) {
+      logoImageUrl = await uploadToCloudinary(req.files.logoImage, 'restaurants/logos');
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    if (req.files && req.files.mapImage) {
+      mapImageUrl = await uploadToCloudinary(req.files.mapImage, 'restaurants/maps');
+    }
 
-    // Create new restaurant
-    const restaurant = new RestaurantModel({
+    const newRestaurant = new RestaurantModel({
       name,
       email,
-      password: hashedPassword,
+      password,
       address,
       phone,
       logoImage: logoImageUrl,
-      mapImage: mapImageUrl
+      mapImage: mapImageUrl,
     });
 
-    await restaurant.save();
-    console.log('Restaurant saved successfully');
-
-    res.status(201).json({
-      success: true,
-      message: "Restaurant registered successfully"
-    });
+    await newRestaurant.save();
+    res.status(201).json({ message: 'Restaurant registered successfully!' });
   } catch (error) {
-    console.error('Restaurant signup error:', error);
-    res.status(500).json({
-      success: false,
-      message: "Internal server error",
-      error: error.message
-    });
+    console.error('Error during restaurant signup:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
